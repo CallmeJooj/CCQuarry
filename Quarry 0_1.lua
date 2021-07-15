@@ -1,3 +1,10 @@
+-- TODO
+-- Dig down
+-- UI
+-- Using chests
+-- Rednet messaging support 
+-- main function
+-- testing and optimizing
 posX = 0
 posZ = 0
 posY = 0
@@ -124,11 +131,11 @@ function resurface()
 
 end
 
+--will check if computer has enough fuel to finish next row and come back
+--if thats not the case it will try to refuel
 function checkFuel()
-    if turtle.getFuelLevel() <= posX + posY + posZ + rows then
-        if refuel() == false then
-            return false
-        end
+    if turtle.getFuelLevel() <= posX + posY + posZ + (2*rows) then
+        return refuel()
     end
     return true
 end
@@ -153,7 +160,6 @@ function digCol(nBlocks)
     for i = 1, nBlocks - 1, 1 do
         digStraight()
     end
-    checkFuel()
 end
 --will change rows
 function changeRow()
@@ -182,11 +188,11 @@ end
 resurface()
 
 -- NOT WORKING
---function changeHeightLevel()
---    if turtle.digDown() == false then
---        -- return
---    end
---    if turtle.digDown() == false then
---        -- return
---    end
---end
+function changeHeightLevel()
+    if turtle.digDown() == false then
+        -- return
+    end
+    if turtle.digDown() == false then
+        -- return
+    end
+end
