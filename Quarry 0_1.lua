@@ -5,10 +5,11 @@
 -- Rednet messaging support 
 -- main function
 -- testing and optimizing
+
 posX = 0
 posZ = 0
 posY = 0
-cardinal = 1 -- cardinal direction ->from the perspective of the turtle!!<- 1 being north, 4 being west
+cardinal, saveCardinal = 1, 1 -- cardinal direction ->from the perspective of the turtle!!<- 1 being north, 4 being west
 rotationTracker = 1
 collumn = 0
 rows = 0
@@ -28,7 +29,7 @@ tracker_tbl = {
         posZ = posZ - 1
     end,
     [4] = function ()
-        posX = posX + 1
+        posX = posX - 1
     end
 }
 function movementTracker()
@@ -67,7 +68,6 @@ end
 function origin(dir)
     for i = dir-1, 0, -1 do
         turtle.forward()
-        movementTracker()
     end
 end
 
@@ -116,7 +116,31 @@ function digStraight()
     turtle.digDown()
 end
 
+function resume()
+    rotLeft()
+    rotLeft()
+    for i = 1, posZ, 1 do
+        turtle.forward()
+    end
+    rotRight()
+    for i = 1, posX, 1 do
+        turtle.forward()
+    end
+    while cardinal ~= saveCardinal do
+        rotRight()
+    end
+    for i = 1, posY, 1 do
+        turtle.down()
+    end
+end
+
+--resurfaces and waits for fuel 
+--REWRITE INTO TWO SEPARATE FUNCTIONS
 function resurface()
+    saveCardinal = cardinal
+    for i = posY, 1, -1 do
+        turtle.up()
+    end
     --going west
     while cardinal ~= 4 do
         rotRight()
@@ -125,10 +149,12 @@ function resurface()
     --the turtle rn is facing west so to face south it must only turn left
     rotLeft()
     origin(posZ)
-    for i = posY, 1, -1 do
-        movUp()
+    while not refuel() do
+        term.clear()
+        term.setCursorPos(1,1)
+        io.write("Waiting for Fuel")
     end
-
+    resume()
 end
 
 --will check if computer has enough fuel to finish next row and come back
@@ -164,35 +190,41 @@ end
 --will change rows
 function changeRow()
     rotate()
-    turlte.forward()
-    movementTracker()
+    digStraight()
     rotate()
 end
 
-turtle.digDown()
-movDown()
-turtle.digDown()
-movDown()
-turtle.digDown()
-digCol(rows)
-for i = 1, collumn-1, 1 do
-    if checkFuel() then
-        rotate()
-        digStraight()
-        rotate()
-        digCol(rows)
-    else 
-        break
-    end
-end
-resurface()
-
--- NOT WORKING
 function changeHeightLevel()
-    if turtle.digDown() == false then
-        -- return
-    end
-    if turtle.digDown() == false then
-        -- return
+    movDown()
+    turtle.digDown()
+    movDown()
+    turtle.digDown()
+    movDown()
+    turtle.digDown()
+    rotLeft()
+    rotLeft()
+end
+
+-- temporary main substitute
+function quarry()
+    turtle.digDown()
+    movDown()
+    turtle.digDown()
+    movDown()
+    turtle.digDown()
+    while posY > 0 do
+        digCol(rows)
+        for i = 1, collumn-1, 1 do
+            if checkFuel() then
+                changeRow()
+                digCol(rows)
+            else 
+                i = i - 1
+                resurface()
+            end
+        end
+        changeHeightLevel()
     end
 end
+
+quarry()
