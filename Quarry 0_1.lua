@@ -1,7 +1,13 @@
 posX = 0
 posZ = 0
 posY = 0
-rotation = 1 -- cardinal direction ->from the perspective of the turtle!!<- 1 being north, 4 being west
+cardinal = 1 -- cardinal direction ->from the perspective of the turtle!!<- 1 being north, 4 being west
+rotationTracker = 1
+collumn = 0
+rows = 0
+
+collumn = io.read()
+rows = io.read()
 
 -- will track position after every movement 
 tracker_tbl = {
@@ -19,23 +25,79 @@ tracker_tbl = {
     end
 }
 function movementTracker()
-    tracker_tbl[rotation]()
+    tracker_tbl[cardinal]()
 end
 
-rotation_tbl = { 
-
-}
-
---NOT WORKING
---still cant find a way to make it rotate right
-function rotate()
-    -- rotate the turtle and ajusts its sense of direction
+--rotates right and updates cardinal
+function rotRight()
     turtle.turnRight()
-    rotation = rotation + 1
-    if rotation > 4 then
-        rotation = 1
+    cardinal = cardinal + 1
+    if cardinal == 5 then
+        cardinal = 1
     end
 end
+--same as rotRight() but for left
+function rotLeft()
+    turtle.turnLeft()
+    cardinal = cardinal - 1
+    if cardinal == 0 then
+        cardinal = 4
+    end
+end
+
+--move up and down and updates position
+function movDown()
+    if turtle.down() then
+        posY = posY + 1
+    end
+end
+function movUp()
+    if turtle.up() then
+        posY = posY - 1
+    end
+end
+
+function origin(dir)
+    for i = dir-1, 0, -1 do
+        turtle.forward()
+        movementTracker()
+    end
+end
+
+--method for turning at a patter of right > right > left > left
+function rotate()
+    rotation_tbl[rotationTracker]()
+end
+rotation_tbl = {  
+    [1] = function ()
+        rotRight()
+        rotationTracker = rotationTracker + 1
+        if rotationTracker == 5 then
+            rotationTracker = 1
+        end
+    end,
+    [2] = function ()
+        rotRight()
+        rotationTracker = rotationTracker + 1
+        if rotationTracker == 5 then
+            rotationTracker = 1
+        end
+    end,
+    [3] = function ()
+        rotLeft()
+        rotationTracker = rotationTracker + 1
+        if rotationTracker == 5 then
+            rotationTracker = 1
+        end
+    end,
+    [4] = function ()
+        rotLeft()
+        rotationTracker = rotationTracker + 1
+        if rotationTracker == 5 then
+            rotationTracker = 1
+        end
+    end
+}
 
 -- can dig straight
 -- dig -> dig /\ dig \/  
@@ -47,10 +109,28 @@ function digStraight()
     turtle.digDown()
 end
 
-function checkFuel()
-    if endturtle.getFuelLevel() == 0 then
-        refuel()
+function resurface()
+    --going west
+    while cardinal ~= 4 do
+        rotRight()
     end
+    origin(posX)
+    --the turtle rn is facing west so to face south it must only turn left
+    rotLeft()
+    origin(posZ)
+    for i = posY, 1, -1 do
+        movUp()
+    end
+
+end
+
+function checkFuel()
+    if turtle.getFuelLevel() <= posX + posY + posZ + rows then
+        if refuel() == false then
+            return false
+        end
+    end
+    return true
 end
 
 --bool true if able to refuel
@@ -68,28 +148,45 @@ function refuel()
     return false
 end
 
---will use function digStraight for digging a row, will try to refuel after every row
-function digRow(nBlocks)
-    for i = 1, nBlocks, 1 do
+--will use function digStraight for digging a row
+function digCol(nBlocks)
+    for i = 1, nBlocks - 1, 1 do
         digStraight()
     end
-    refuel()
+    checkFuel()
 end
-
---NOT WORKING
 --will change rows
 function changeRow()
     rotate()
-    digStraight()
+    turlte.forward()
+    movementTracker()
     rotate()
 end
 
--- NOT WORKING
-function changeHeightLevel()
-    if turtle.digDown() == false then
-        -- return
-    end
-    if turtle.digDown() == false then
-        -- return
+turtle.digDown()
+movDown()
+turtle.digDown()
+movDown()
+turtle.digDown()
+digCol(rows)
+for i = 1, collumn-1, 1 do
+    if checkFuel() then
+        rotate()
+        digStraight()
+        rotate()
+        digCol(rows)
+    else 
+        break
     end
 end
+resurface()
+
+-- NOT WORKING
+--function changeHeightLevel()
+--    if turtle.digDown() == false then
+--        -- return
+--    end
+--    if turtle.digDown() == false then
+--        -- return
+--    end
+--end
