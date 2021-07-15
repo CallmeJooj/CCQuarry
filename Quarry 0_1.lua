@@ -22,6 +22,10 @@ function movementTracker()
     tracker_tbl[rotation]()
 end
 
+rotation_tbl = { 
+
+}
+
 --NOT WORKING
 --still cant find a way to make it rotate right
 function rotate()
