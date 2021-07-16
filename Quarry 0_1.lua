@@ -1,8 +1,10 @@
 -- TODO
 -- UI
 -- Using chests
--- Rednet messaging support 
+-- KINDA Rednet messaging support KINDA
 -- testing and optimizing
+-- checking if full
+-- going back when full
 
 --litte rednet code for debugging
 rednet.open("left")
@@ -153,7 +155,7 @@ function resurface()
     --the turtle rn is facing west so to face south it must only turn left
     rotLeft()
     origin(posZ)
-    rednet.broadcast("resurfaced")
+    rednet.broadcast("Resurfaced")
 end
 
 --resurfaces and waits for fuel
@@ -167,12 +169,41 @@ function fuelling()
     end
 end
 
+function sDump()
+    for i = 1, 16, 1 do
+        if not turtle.drop() then
+            rednet.broadcast("CHEST FULL")
+            term.clear()
+            term.setCursorPos(1,1)
+            io.write("CHEST FULL")
+            while not turtle.drop() do
+                --waits :)
+            end
+        end
+    end
+end
+
+function storeItems()
+    resurface()
+    if string.find(textutils.serialize(turtle.inspect()), "chest") ~=nil  then
+        sDump()
+    end
+end
+
 --will check if computer has enough fuel to finish next row and come back
 --if thats not the case it will try to refuel
 function checkFuel()
     if turtle.getFuelLevel() <= posX + posY + posZ + (cardinal == 3 and (2*rows-2) or 0) + 2 then --new version with ternaries
         rednet.broadcast("Not enough fuel")
         return refuel()
+    end
+    return true
+end
+
+--checks if turtle's inventory is full
+function isFull()
+    if turtle.getItemCount(16) == 0 then
+        return false
     end
     return true
 end
@@ -222,6 +253,7 @@ function changeHeightLevel()
     rotLeft()
 end
 
+
 -- main
 function quarry()
     turtle.digDown()
@@ -232,13 +264,13 @@ function quarry()
     while posY > 0 do
         digCol(rows)
         for i = 1, collumn-1, 1 do
-            if checkFuel() then
-                changeCol()
-                digCol(rows)
-            else
+            if not checkFuel() then
                 rednet.broadcast("FAILED CHECKFUEL")
                 i = i - 1
                 fuelling()
+            elseif isFull() then
+                -- TODO if garbage then throw away garbage else
+                storeItems()
             end
         end
         if posZ >= rows or posX >= collumn then
