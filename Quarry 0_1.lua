@@ -4,16 +4,17 @@
 -- Rednet messaging support 
 -- testing and optimizing
 
+--litte rednet code for debugging
+rednet.open("left")
+
+
 posX = 0
 posZ = 0
 posY = 0
 cardinal, saveCardinal = 1, 1 -- cardinal direction ->from the perspective of the turtle!!<- 1 being north, 4 being west
 rotationTracker = 1
-collumn = 0
-rows = 0
-
-collumn = io.read()
-rows = io.read()
+collumn = 3
+rows = 3
 
 -- will track position after every movement 
 function movementTracker()
@@ -109,7 +110,8 @@ rotation_tbl = {
 -- dig -> dig /\ dig \/  
 function digStraight()
     turtle.dig()
-    turtle.forward()
+    while not turtle.forward() do 
+    end
     movementTracker()
     turtle.digUp()
     turtle.digDown()
@@ -137,6 +139,7 @@ end
 --resurfaces
 --goes back to its origin point
 function resurface()
+    rednet.broadcast("resurfacing")
     saveCardinal = cardinal
     for i = posY, 1, -1 do
         turtle.up()
@@ -149,6 +152,7 @@ function resurface()
     --the turtle rn is facing west so to face south it must only turn left
     rotLeft()
     origin(posZ)
+    rednet.broadcast("resurfaced")
 end
 
 --resurfaces and waits for fuel
@@ -166,6 +170,7 @@ end
 --if thats not the case it will try to refuel
 function checkFuel()
     if turtle.getFuelLevel() <= posX + posY + posZ + (cardinal == 3 and (2*rows-2) or 0) + 2 then --new version with ternaries
+        rednet.broadcast("Not enough fuel")
         return refuel()
     end
     return true
@@ -177,12 +182,16 @@ function refuel()
     for i = 1, 16, 1 do
         turtle.select(i)
         if turtle.refuel(0) then
+            if i == i then
+                rednet.broadcast("Refueling")
+            end
             turtle.refuel(64)
             turtle.select(1)
             return true
         end
     end
     turtle.select(1)
+    rednet.broadcast("FAILED TO REFUEL")
     return false
 end
 
@@ -226,8 +235,15 @@ function quarry()
                 changeCol()
                 digCol(rows)
             else
+                rednet.broadcast("FAILED CHECKFUEL")
                 i = i - 1
-                resurface()
+                fuelling()
+            end
+        end
+        if posZ >= rows or posX >= collumn then
+            rednet.broadcast("IM GOING ROGUE")
+            if not shell.run("shutdown") then
+                break
             end
         end
         changeHeightLevel()
