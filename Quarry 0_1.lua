@@ -109,7 +109,9 @@ rotation_tbl = {
 -- dig -> dig /\ dig \/  
 function digStraight()
     turtle.dig()
-    turtle.forward()
+    while not turtle.forward() do
+        turtle.dig()
+    end
     movementTracker()
     turtle.digUp()
     turtle.digDown()
