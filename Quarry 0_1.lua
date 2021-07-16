@@ -1,9 +1,7 @@
 -- TODO
--- Dig down
 -- UI
 -- Using chests
 -- Rednet messaging support 
--- main function
 -- testing and optimizing
 
 posX = 0
@@ -18,6 +16,9 @@ collumn = io.read()
 rows = io.read()
 
 -- will track position after every movement 
+function movementTracker()
+    tracker_tbl[cardinal]()
+end
 tracker_tbl = {
     [1] = function ()
         posZ = posZ + 1
@@ -32,9 +33,6 @@ tracker_tbl = {
         posX = posX - 1
     end
 }
-function movementTracker()
-    tracker_tbl[cardinal]()
-end
 
 --rotates right and updates cardinal
 function rotRight()
@@ -65,6 +63,7 @@ function movUp()
     end
 end
 
+--returns to origin in a single dimension
 function origin(dir)
     for i = dir-1, 0, -1 do
         turtle.forward()
@@ -116,6 +115,7 @@ function digStraight()
     turtle.digDown()
 end
 
+--resumes digging
 function resume()
     rotLeft()
     rotLeft()
@@ -134,8 +134,8 @@ function resume()
     end
 end
 
---resurfaces and waits for fuel 
---REWRITE INTO TWO SEPARATE FUNCTIONS
+--resurfaces
+--goes back to its origin point
 function resurface()
     saveCardinal = cardinal
     for i = posY, 1, -1 do
@@ -149,18 +149,23 @@ function resurface()
     --the turtle rn is facing west so to face south it must only turn left
     rotLeft()
     origin(posZ)
+end
+
+--resurfaces and waits for fuel
+function fuelling()
+    resurface()
+    rotRight()
     while not refuel() do
         term.clear()
         term.setCursorPos(1,1)
         io.write("Waiting for Fuel")
     end
-    resume()
 end
 
 --will check if computer has enough fuel to finish next row and come back
 --if thats not the case it will try to refuel
 function checkFuel()
-    if turtle.getFuelLevel() <= posX + posY + posZ + (2*rows) then
+    if turtle.getFuelLevel() <= posX + posY + posZ + (cardinal == 3 and (2*rows-2) or 0) + 2 then --new version with ternaries
         return refuel()
     end
     return true
@@ -187,13 +192,15 @@ function digCol(nBlocks)
         digStraight()
     end
 end
+
 --will change rows
-function changeRow()
+function changeCol()
     rotate()
     digStraight()
     rotate()
 end
 
+--digs and goes down 3 blocks for mining another layer
 function changeHeightLevel()
     movDown()
     turtle.digDown()
@@ -205,7 +212,7 @@ function changeHeightLevel()
     rotLeft()
 end
 
--- temporary main substitute
+-- main
 function quarry()
     turtle.digDown()
     movDown()
@@ -216,9 +223,9 @@ function quarry()
         digCol(rows)
         for i = 1, collumn-1, 1 do
             if checkFuel() then
-                changeRow()
+                changeCol()
                 digCol(rows)
-            else 
+            else
                 i = i - 1
                 resurface()
             end
