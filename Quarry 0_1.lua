@@ -1,10 +1,13 @@
 -- TODO
 -- UI
--- Using chests
--- KINDA Rednet messaging support KINDA
+-- DONE Using chests
+-- 80% Rednet messaging support
 -- testing and optimizing
--- checking if full
--- going back when full
+-- DONE checking if full
+-- 90% going back when full 
+-- 0% sending PM to multiple computers
+-- 0% "back" command to return immediately
+
 
 --litte rednet code for debugging
 --CHANGE REDNET BROADCASTS INTO PM FOR SPECIFIC COMPUTER
@@ -273,6 +276,15 @@ end
 
 -- main
 local function quarry()
+    if turtle.getFuelLevel() < rows * collumn then
+        rednet.broadcast("NOT ENOUGH FUEL TO START")
+        print("NOT ENOUGH FUEL TO START")
+        print("INSERT FUEL IN SLOT 1")
+        while turtle.getFuelLevel() < rows * collumn do
+            turtle.select(1)
+            turtle.refuel()
+        end
+    end
     turtle.digDown()
     movDown()
     turtle.digDown()
