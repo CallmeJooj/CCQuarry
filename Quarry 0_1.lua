@@ -7,19 +7,19 @@
 -- going back when full
 
 --litte rednet code for debugging
+--CHANGE REDNET BROADCASTS INTO PM FOR SPECIFIC COMPUTER
 rednet.open("left")
-
 
 posX = 0
 posZ = 0
 posY = 0
 cardinal, saveCardinal = 1, 1 -- cardinal direction ->from the perspective of the turtle!!<- 1 being north, 4 being west
 rotationTracker = 1
-collumn = io.read()
-rows = io.read()
+collumn = arg[1] or 5
+rows = arg[2] or arg[1] or 5
 
 -- will track position after every movement 
-function movementTracker()
+local function movementTracker()
     tracker_tbl[cardinal]()
 end
 tracker_tbl = {
@@ -38,7 +38,7 @@ tracker_tbl = {
 }
 
 --rotates right and updates cardinal
-function rotRight()
+local function rotRight()
     turtle.turnRight()
     cardinal = cardinal + 1
     if cardinal == 5 then
@@ -46,7 +46,7 @@ function rotRight()
     end
 end
 --same as rotRight() but for left
-function rotLeft()
+local function rotLeft()
     turtle.turnLeft()
     cardinal = cardinal - 1
     if cardinal == 0 then
@@ -55,26 +55,26 @@ function rotLeft()
 end
 
 --move up and down and updates position
-function movDown()
+local function movDown()
     if turtle.down() then
         posY = posY + 1
     end
 end
-function movUp()
+local function movUp()
     if turtle.up() then
         posY = posY - 1
     end
 end
 
 --returns to origin in a single dimension
-function origin(dir)
+local function origin(dir)
     for i = dir-1, 0, -1 do
         turtle.forward()
     end
 end
 
 --method for turning at a patter of right > right > left > left
-function rotate()
+local function rotate()
     rotation_tbl[rotationTracker]()
 end
 rotation_tbl = {  
@@ -110,7 +110,7 @@ rotation_tbl = {
 
 -- can dig straight
 -- dig -> dig /\ dig \/  
-function digStraight()
+local function digStraight()
     turtle.dig()
     while not turtle.forward() do
         turtle.dig()
@@ -121,9 +121,10 @@ function digStraight()
 end
 
 --resumes digging
-function resume()
-    rotLeft()
-    rotLeft()
+local function resume()
+    while cardinal ~= 1 do
+        rotRight()
+    end
     for i = 1, posZ, 1 do
         turtle.forward()
     end
@@ -141,8 +142,7 @@ end
 
 --resurfaces
 --goes back to its origin point
-function resurface()
-    rednet.broadcast("resurfacing")
+local function resurface()
     saveCardinal = cardinal
     for i = posY, 1, -1 do
         turtle.up()
@@ -155,53 +155,70 @@ function resurface()
     --the turtle rn is facing west so to face south it must only turn left
     rotLeft()
     origin(posZ)
-    rednet.broadcast("Resurfaced")
 end
 
 --resurfaces and waits for fuel
-function fuelling()
+local function fuelling()
     resurface()
-    rotRight()
+    if not refuel() then
+        io.write("Waiting for Fuel")
+    end
     while not refuel() do
         term.clear()
         term.setCursorPos(1,1)
-        io.write("Waiting for Fuel")
     end
+    resume()
 end
 
-function sDump()
-    for i = 1, 16, 1 do
-        if not turtle.drop() then
-            rednet.broadcast("CHEST FULL")
-            term.clear()
-            term.setCursorPos(1,1)
-            io.write("CHEST FULL")
-            while not turtle.drop() do
-                --waits :)
+-- still clunky af
+local function storeDump()
+    local FULLCHESTBROADCASTTAG = false
+    local fullchest = 1
+    while fullchest < 16 do
+        for i = 1, 16, 1 do
+            turtle.select(17-i)
+            turtle.drop()
+            fullchest = fullchest + 1
+            if turtle.getItemCount(17-i) ~= 0 then
+                fullchest = 1
+                if FULLCHESTBROADCASTTAG == false then
+                    rednet.broadcast("CHEST FULL")
+                    FULLCHESTBROADCASTTAG = true
+                end
+                term.clear()
+                term.setCursorPos(1,1)
+                io.write("CHEST FULL")
             end
         end
     end
 end
 
-function storeItems()
+--CLUNKY AS FUCK but it works (i think)
+local function storeItems()
+    rednet.broadcast("GOING BACK TO STORE ITEMS")
     resurface()
-    if string.find(textutils.serialize(turtle.inspect()), "chest") ~=nil  then
-        sDump()
+    if string.find(textutils.serialize(turtle.inspect()), "chest") ~= nil  then
+        storeDump()
+        return
+    else
+        rednet.broadcast("CAN'T FIND CHEST")
+        while string.find(textutils.serialize(turtle.inspect()), "chest") == nil do
+        end
     end
 end
 
 --will check if computer has enough fuel to finish next row and come back
 --if thats not the case it will try to refuel
-function checkFuel()
+local function checkFuel()
     if turtle.getFuelLevel() <= posX + posY + posZ + (cardinal == 3 and (2*rows-2) or 0) + 2 then --new version with ternaries
-        rednet.broadcast("Not enough fuel")
+        rednet.broadcast("NOT ENOUGH POWER TO RETURN! CHECKING FOR SOURCE OF FUEL")
         return refuel()
     end
     return true
 end
 
 --checks if turtle's inventory is full
-function isFull()
+local function isFull()
     if turtle.getItemCount(16) == 0 then
         return false
     end
@@ -210,12 +227,12 @@ end
 
 --bool true if able to refuel
 --refuel if empty--
-function refuel() 
+local function refuel()
     for i = 1, 16, 1 do
         turtle.select(i)
         if turtle.refuel(0) then
-            if i == i then
-                rednet.broadcast("Refueling")
+            if i == 1 then
+                rednet.broadcast("REFUELING")
             end
             turtle.refuel(64)
             turtle.select(1)
@@ -227,22 +244,22 @@ function refuel()
     return false
 end
 
---will use function digStraight for digging a row
-function digCol(nBlocks)
+--will use local function digStraight for digging a row
+local function digCol(nBlocks)
     for i = 1, nBlocks - 1, 1 do
         digStraight()
     end
 end
 
 --will change rows
-function changeCol()
+local function changeCol()
     rotate()
     digStraight()
     rotate()
 end
 
 --digs and goes down 3 blocks for mining another layer
-function changeHeightLevel()
+local function changeHeightLevel()
     movDown()
     turtle.digDown()
     movDown()
@@ -255,7 +272,7 @@ end
 
 
 -- main
-function quarry()
+local function quarry()
     turtle.digDown()
     movDown()
     turtle.digDown()
@@ -265,18 +282,15 @@ function quarry()
         digCol(rows)
         for i = 1, collumn-1, 1 do
             if not checkFuel() then
-                rednet.broadcast("FAILED CHECKFUEL")
                 i = i - 1
                 fuelling()
             elseif isFull() then
+                i = i - 1
                 -- TODO if garbage then throw away garbage else
                 storeItems()
-            end
-        end
-        if posZ >= rows or posX >= collumn then
-            rednet.broadcast("IM GOING ROGUE")
-            if not shell.run("shutdown") then
-                break
+            else
+                changeCol()
+                digCol(rows)
             end
         end
         changeHeightLevel()
