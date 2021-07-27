@@ -13,6 +13,11 @@
 --CHANGE REDNET BROADCASTS INTO PM FOR SPECIFIC COMPUTER
 rednet.open("left")
 
+FIND_BOTTOM_BUFFER = 200
+FINDBOTTOM = false
+if arg[3] == 'b' then
+    FINDBOTTOM = true
+end
 posX = 0
 posZ = 0
 posY = 0
@@ -80,7 +85,7 @@ end
 local function rotate()
     rotation_tbl[rotationTracker]()
 end
-rotation_tbl = {  
+rotation_tbl = {
     [1] = function ()
         rotRight()
         rotationTracker = rotationTracker + 1
@@ -177,6 +182,8 @@ end
 local function storeDump()
     local FULLCHESTBROADCASTTAG = false
     local fullchest = 1
+    -- dude this code is so clunky like my god
+    -- well its working
     while fullchest < 16 do
         for i = 1, 16, 1 do
             turtle.select(17-i)
@@ -200,14 +207,18 @@ end
 local function storeItems()
     rednet.broadcast("GOING BACK TO STORE ITEMS")
     resurface()
-    if string.find(textutils.serialize(turtle.inspect()), "chest") ~= nil  then
-        storeDump()
-        return
-    else
-        rednet.broadcast("CAN'T FIND CHEST")
-        while string.find(textutils.serialize(turtle.inspect()), "chest") == nil do
-        end
+    while cardinal ~= 3 do
+        rotLeft()
     end
+    if turtle.inspect() then
+        storeDump()
+    else
+        rednet.broadcast("CANT FIND CHEST")
+        while not turtle.inspect() do
+        end
+        storeDump()
+    end
+    resume()
 end
 
 --will check if computer has enough fuel to finish next row and come back
@@ -222,8 +233,10 @@ end
 
 --checks if turtle's inventory is full
 local function isFull()
-    if turtle.getItemCount(16) == 0 then
-        return false
+    for i = 16, 1, -1 do    
+        if turtle.getItemCount(i) == 0 then
+            return false
+        end
     end
     return true
 end
@@ -273,37 +286,54 @@ local function changeHeightLevel()
     rotLeft()
 end
 
+function findBottom()
+    while not turtle.inspectDown() do
+        movDown()
+    end
+    movUp()
+end
 
 -- main
 local function quarry()
-    if turtle.getFuelLevel() < rows * collumn then
+    -- added FINDBOTTOM variable which makes the turtle resume a previously dug quarry
+    -- this requires at least a 200 fuel + rows * collumn fuel to start
+    if turtle.getFuelLevel() < rows * collumn + (FINDBOTTOM and (FIND_BOTTOM_BUFFER) or 0) then
+        if FINDBOTTOM then
+            print("THIS TURTLE IS SET TO RESUME A PRE-DUG QUARRY, IT NEEDS AT LEAST ".. FIND_BOTTOM_BUFFER + (rows * collumn) .." FUEL TO START")
+        end
         rednet.broadcast("NOT ENOUGH FUEL TO START")
         print("NOT ENOUGH FUEL TO START")
         print("INSERT FUEL IN SLOT 1")
-        while turtle.getFuelLevel() < rows * collumn do
+        while turtle.getFuelLevel() < rows * collumn + (FINDBOTTOM and (FIND_BOTTOM_BUFFER) or 0) do
             turtle.select(1)
             turtle.refuel()
         end
+    end
+    if isFull() then
+        storeItems()
+    end
+    while cardinal ~= 1 do
+        rotRight()
     end
     turtle.digDown()
     movDown()
     turtle.digDown()
     movDown()
     turtle.digDown()
+    if FINDBOTTOM then
+        findBottom()
+    end
     while posY > 0 do
         digCol(rows)
         for i = 1, collumn-1, 1 do
             if not checkFuel() then
-                i = i - 1
                 fuelling()
             elseif isFull() then
-                i = i - 1
                 -- TODO if garbage then throw away garbage else
                 storeItems()
-            else
-                changeCol()
-                digCol(rows)
             end
+            changeCol()
+            digCol(rows)
         end
         changeHeightLevel()
     end
