@@ -5,7 +5,7 @@
 - Will store loot on a chest
 - Sends rednet log messages
 
-##TODO
+## TODO
 - Add more rednet support
 - Dump support
 - Better menu
